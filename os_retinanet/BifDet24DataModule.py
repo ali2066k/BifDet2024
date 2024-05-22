@@ -170,8 +170,13 @@ class BifDet2024DataModule():
         self.val_transform = self.val_preprocess if not self.augment else None  # TODO:augmentation should b e implemented here
 
         if dataset_library == 'monai':
-            self.train_set = Dataset(data=self.train_set, transform=self.train_preprocess)
-            self.val_set = Dataset(data=self.train_set, transform=self.val_transform)
+            if self.params["CACHE_DS"]:
+                self.train_set = CacheDataset(data=self.train_set[:-2], transform=self.train_preprocess)
+                self.val_set = CacheDataset(data=self.train_set[-2:], transform=self.val_transform)
+            else:
+                self.train_set = Dataset(data=self.train_set[:-2], transform=self.train_preprocess)
+                self.val_set = Dataset(data=self.train_set[-2:], transform=self.val_transform)
+
             # self.test_set = Dataset(data=self.test_files, transform=self.val_transform)
 
     def train_dataloader(self) -> DataLoader:

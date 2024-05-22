@@ -18,9 +18,10 @@ module load python
 conda activate bifdet
 
 # Navigate to the directory containing your Python script
-cd /home/ids/akeshavarzi/projects/bifdet/retinanet_pipeline/
+cd /home/ids/akeshavarzi/projects/bifdet2024/retinanet_pipeline/
 file_paths_args = "--exp_path / \
-                   --model_weights_path /"
+                   --model_weights_path / \
+                   --annot_fname bboxes_16_cases.json"
 training_args="--patch_size 256\
                --val_patch_size 256\
                --patience 60 \
@@ -31,7 +32,6 @@ training_args="--patch_size 256\
                --val_interval 1 \
                --amp \
                --cache_ds \
-               --dataset ATM22 \
                --detection_per_img 200 \
                --nms_thresh 0.22 \
                --score_thresh_glb 0.1 \

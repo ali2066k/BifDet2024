@@ -70,6 +70,7 @@ def main():
     torch.backends.cudnn.benchmark = True
     torch.set_num_threads(4)
 
+    print(os.getenv("DATA_SRC"))
     print(args.annot_fname)
 
     # 1. Data loaders
