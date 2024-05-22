@@ -23,7 +23,7 @@ from monai.apps.detection.networks.retinanet_network import (
 from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
 from monai.apps.detection.metrics.coco import COCOMetric
 from utils import GradualWarmupScheduler, visualize_one_xy_slice_in_3d_image, make_dirs
-from ATM22DataModule import BifDet2024DataModule
+from BifDet24DataModule import BifDet2024DataModule
 from dotenv import load_dotenv, find_dotenv
 import datetime
 
@@ -69,6 +69,8 @@ def main():
     torch.backends.cudnn.enabled = False
     torch.backends.cudnn.benchmark = True
     torch.set_num_threads(4)
+
+    print(args.annot_fname)
 
     # 1. Data loaders
     data_module = BifDet2024DataModule(

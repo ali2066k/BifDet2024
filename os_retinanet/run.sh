@@ -2,7 +2,7 @@
 #SBATCH --job-name=expv1%j        # name of job
 #SBATCH --output=exp_outputs/exp_retina_TravailGPU%j.out
 #SBATCH --error=exp_outputs/exp_retina_TravailGPU%j.err
-#SBATCH --time=20:00:00       # Maximum execution time (HH:MM:SS)
+#SBATCH --time=30:00:00       # Maximum execution time (HH:MM:SS)
 #SBATCH --nodes=1             # Number of nodes
 #SBATCH --gpus=1              # Number of GPUs
 #SBATCH --cpus-per-task=8     # Number of CPU cores per task
