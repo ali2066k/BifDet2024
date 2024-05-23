@@ -96,8 +96,8 @@ def main():
     )
 
     # 2) build network
-    conv1_t_size = [max(7, 2 * s + 1) for s in [2, 2, 1]]
-    print(conv1_t_size)
+    conv1_t_size = [max(7, 2 * s + 1) for s in [2, 2, 2]]
+    # print(conv1_t_size)
     backbone = resnet.ResNet(
         block=resnet.ResNetBottleneck,
         layers=[3, 4, 6, 3],
@@ -108,9 +108,9 @@ def main():
     )
 
     # check the model summary
-    input_size = (1, 256, 256, 256)  # Change according to your input size
+    # input_size = (1, 256, 256, 256)  # Change according to your input size
     # Use torchsummary to print the model summary
-    summary(model=backbone.to(device), input_size=input_size, device="cuda" if torch.cuda.is_available() else "cpu")
+    # summary(model=backbone.to(device), input_size=input_size, device="cuda" if torch.cuda.is_available() else "cpu")
     # sys.exit()
 
     feature_extractor = resnet_fpn_feature_extractor(
@@ -155,10 +155,10 @@ def main():
 
     # set validation components
     detector.set_box_selector_parameters(
-        score_thresh=args.score_thresh_glb,
-        topk_candidates_per_level=args.topk_candidates_per_level,
-        nms_thresh=args.nms_thresh,
-        detections_per_img=args.detection_per_img,
+        score_thresh=args.score_thresh_glb, # no box with scores less than score_thresh will be kept
+        topk_candidates_per_level=args.topk_candidates_per_level, # max number of boxes to keep for each level
+        nms_thresh=args.nms_thresh, # box overlapping threshold for NMS
+        detections_per_img=args.detection_per_img, # max number of boxes to keep for each image
     )
     detector.set_sliding_window_inferer(
         roi_size=[args.patch_size, args.patch_size, args.patch_size],
@@ -217,15 +217,20 @@ def main():
             step += 1
             inputs = [
                 batch_data_ii["image"].to(device) for batch_data_i in batch_data for batch_data_ii in batch_data_i
+                # batch_data_i["image"].to(device) for batch_data_i in batch_data
             ]
+            # print(inputs[0].shape)
             targets = [
                 dict(
                     label=batch_data_ii["label"].to(device),
                     boxes=batch_data_ii["boxes"].to(device),
+                    # label=batch_data_i["label"].to(device),
+                    # boxes=batch_data_i["boxes"].to(device),
                 )
                 for batch_data_i in batch_data
                 for batch_data_ii in batch_data_i
             ]
+            # print(targets[0])
             for param in detector.network.parameters():
                 param.grad = None
 
@@ -390,7 +395,7 @@ def parse_args():
     parser.add_argument("--channels", type=int, default=int(os.getenv('CHANNELS')), help="Channels")
     parser.add_argument("--strides", type=int, default=int(os.getenv('STRIDES')), help="Strides")
     parser.add_argument("--num_res_units", type=int, default=int(os.getenv('NUM_RES_UNITS')), help="Number of residual units")
-    parser.add_argument("--dropout", type=float, default=float(os.getenv('DROPOUT')), help="Dropout rate")
+    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate -- not used in this model")
     parser.add_argument("--norm", type=str, default=os.getenv('NORM'), help="Normalization type")
 
     # Training Hyperparameters
@@ -433,7 +438,7 @@ def parse_args():
 
     # ATSS parameters
     parser.add_argument("--num_cands", type=int, default=4, help="atss hps -- num_candidates")
-    parser.add_argument("--center_in_gt", action="store_false", help="atss hps -- center_in_gt")
+    parser.add_argument("--center_in_gt", action="store_true", help="atss hps -- center_in_gt")
     parser.add_argument("--batch_size_per_image", type=int, default=64, help="atss hps -- batch_size_per_image")
     parser.add_argument("--positive_fraction", type=float, default=0.5, help="atss hps -- positive_fraction")
     parser.add_argument("--pool_size", type=int, default=20, help="atss hps -- pool_size")

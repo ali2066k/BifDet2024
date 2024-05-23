@@ -14,6 +14,7 @@ from monai.transforms import (
     EnsureChannelFirstd,
     EnsureTyped,
     DeleteItemsd,
+    DivisiblePadd,
     CropForegroundd,
     ResizeWithPadOrCropd,
     RandSpatialCropd, ScaleIntensityRanged,
@@ -43,9 +44,10 @@ class BifDet2024DataModule():
         self.compute_dtype = compute_dtype
 
     def prepare_data_monai(self) -> None:
+        print(self.annotation_path)
         self.train_set = load_decathlon_datalist(
             self.annotation_path,
-            is_segmentation=True,
+            is_segmentation=False,
             data_list_key="training",
             base_dir=self.train_data_path,
         )
@@ -58,7 +60,8 @@ class BifDet2024DataModule():
         train_transforms = Compose(
             [
                 LoadImaged(keys=['image', 'lung']),
-                EnsureChannelFirstd(keys=['image', 'lung']),
+                EnsureChannelFirstd(keys=['image', 'lung'],
+                                    strict_check=True),
                 EnsureTyped(keys=['image', 'lung', 'boxes'], dtype=self.compute_dtype),
                 EnsureTyped(keys=['label'], dtype=torch.long),
                 ScaleIntensityRanged(keys='image',
@@ -67,21 +70,14 @@ class BifDet2024DataModule():
                                      b_min=self.params['PIXEL_NORM_MIN'],
                                      b_max=self.params['PIXEL_NORM_MAX'], clip=True),
                 ConvertBoxToStandardModed(box_keys=['boxes'], mode="cccwhd"),
+                CropForegroundd(keys=['image', 'lung'], source_key='lung', allow_smaller=False),
+                DivisiblePadd(keys=['image'], k=self.params["PATCH_SIZE"]),
                 AffineBoxToImageCoordinated(
                     box_keys=['boxes'],
                     box_ref_image_keys='image',
                     image_meta_key_postfix="meta_dict",
                     affine_lps_to_ras=True,
                 ),
-                BoxToMaskd(
-                    box_keys=['boxes'],
-                    label_keys=['label'],
-                    box_mask_keys=["box_mask"],
-                    box_ref_image_keys='image',
-                    min_fg_label=0,
-                    ellipse_mask=False,
-                ),
-                CropForegroundd(keys=['image', 'lung', 'box_mask'], source_key='lung'),
                 RandCropBoxByPosNegLabeld(
                     image_keys=['image'],
                     box_keys='boxes',
@@ -91,29 +87,18 @@ class BifDet2024DataModule():
                     num_samples=1,
                     pos=1,
                     neg=0,
-                    allow_smaller=True
+                    allow_smaller=False
                 ),
-                ResizeWithPadOrCropd(keys=['image', 'lung', 'box_mask'], spatial_size=256),
-                MaskToBoxd(
-                    box_mask_keys="box_mask", box_keys="boxes",
-                    label_keys="label", min_fg_label=0
-                ),
-                DeleteItemsd(keys=["box_mask"]),
-                ClipBoxToImaged(
-                    box_keys='boxes',
-                    label_keys=['label'],
-                    box_ref_image_keys='image',
-                    remove_empty=True,
-                ),
-                EnsureTyped(keys=['image', 'boxes'], dtype=self.compute_dtype),
+                EnsureTyped(keys=['image', 'lung', 'boxes'], dtype=self.compute_dtype),
                 EnsureTyped(keys=['label'], dtype=torch.long),
             ]
         )
         val_transforms = Compose(
             [
                 LoadImaged(keys=['image', 'lung']),
-                EnsureChannelFirstd(keys=['image', 'lung']),
-                EnsureTyped(keys=['image', 'lung', 'boxes'], dtype=torch.float32),
+                EnsureChannelFirstd(keys=['image', 'lung'],
+                                    strict_check=True),
+                EnsureTyped(keys=['image', 'lung', 'boxes'], dtype=self.compute_dtype),
                 EnsureTyped(keys=['label'], dtype=torch.long),
                 ScaleIntensityRanged(keys='image',
                                      a_min=self.params['PIXEL_VALUE_MIN'],
@@ -121,44 +106,26 @@ class BifDet2024DataModule():
                                      b_min=self.params['PIXEL_NORM_MIN'],
                                      b_max=self.params['PIXEL_NORM_MAX'], clip=True),
                 ConvertBoxToStandardModed(box_keys=['boxes'], mode="cccwhd"),
+                CropForegroundd(keys=['image', 'lung'], source_key='lung', allow_smaller=False),
+                DivisiblePadd(keys=['image'], k=self.params["PATCH_SIZE"]),
                 AffineBoxToImageCoordinated(
                     box_keys=['boxes'],
                     box_ref_image_keys='image',
                     image_meta_key_postfix="meta_dict",
                     affine_lps_to_ras=True,
                 ),
-                BoxToMaskd(
-                    box_keys=['boxes'],
-                    label_keys=['label'],
-                    box_mask_keys=["box_mask"],
-                    box_ref_image_keys='image',
-                    min_fg_label=0,
-                    ellipse_mask=False,
-                ),
-                CropForegroundd(keys=['image', 'lung', 'box_mask'], source_key='lung'),
                 RandCropBoxByPosNegLabeld(
                     image_keys=['image'],
                     box_keys='boxes',
                     label_keys='label',
-                    spatial_size=self.params["VAL_PATCH_SIZE"],
+                    spatial_size=self.params["PATCH_SIZE"],
                     whole_box=True,
                     num_samples=1,
                     pos=1,
                     neg=0,
+                    allow_smaller=False
                 ),
-                ResizeWithPadOrCropd(keys=['image', 'lung', 'box_mask'], spatial_size=256),
-                MaskToBoxd(
-                    box_mask_keys="box_mask", box_keys="boxes",
-                    label_keys="label", min_fg_label=0
-                ),
-                DeleteItemsd(keys=["box_mask"]),
-                ClipBoxToImaged(
-                    box_keys='boxes',
-                    label_keys=['label'],
-                    box_ref_image_keys='image',
-                    remove_empty=True,
-                ),
-                EnsureTyped(keys=['image', 'boxes'], dtype=self.compute_dtype),
+                EnsureTyped(keys=['image', 'lung', 'boxes'], dtype=self.compute_dtype),
                 EnsureTyped(keys=['label'], dtype=torch.long),
             ]
         )
@@ -172,10 +139,10 @@ class BifDet2024DataModule():
         if dataset_library == 'monai':
             if self.params["CACHE_DS"]:
                 self.train_set = CacheDataset(data=self.train_set[:-2], transform=self.train_preprocess)
-                self.val_set = CacheDataset(data=self.train_set[-2:], transform=self.val_transform)
+                # self.val_set = CacheDataset(data=self.train_set[12:], transform=self.val_transform)
             else:
                 self.train_set = Dataset(data=self.train_set[:-2], transform=self.train_preprocess)
-                self.val_set = Dataset(data=self.train_set[-2:], transform=self.val_transform)
+            self.val_set = Dataset(data=self.train_set[12:15], transform=self.val_transform)
 
             # self.test_set = Dataset(data=self.test_files, transform=self.val_transform)
 

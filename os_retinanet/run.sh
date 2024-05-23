@@ -1,12 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=expv1%j        # name of job
+#SBATCH --job-name=exp1%j        # name of job
 #SBATCH --output=exp_outputs/exp_retina_TravailGPU%j.out
 #SBATCH --error=exp_outputs/exp_retina_TravailGPU%j.err
-#SBATCH --time=30:00:00       # Maximum execution time (HH:MM:SS)
-#SBATCH --nodes=1             # Number of nodes
+#SBATCH --time=24:00:00       # Maximum execution time (HH:MM:SS)
 #SBATCH --gpus=1              # Number of GPUs
-#SBATCH --cpus-per-task=8     # Number of CPU cores per task
-#SBATCH --partition=V100-32GB       # GPU partition (you might need to adjust this)
+#SBATCH --nodes=1             # Number of nodes
+#SBATCH --ntasks-per-node 1
+#SBATCH --cpus-per-task 20     # Number of CPU cores per task
+#SBATCH --partition=A100       # GPU partition (you might need to adjust this)
+#SBATCH --mem=120GB
 
 set -x
 
@@ -35,13 +37,13 @@ training_args="--patch_size 256\
                --detection_per_img 200 \
                --nms_thresh 0.22 \
                --score_thresh_glb 0.1 \
-               --detector_lr 1e-3 \
+               --detector_lr 1e-2 \
                --w_cls 0.5 \
                --topk_candidates_per_level 1000 \
                --sw_inferer_overlap 0.25 \
                --sw_batch_size \
                --sw_mode constant \
-               --num_cands 4 \
+               --num_cands 8 \
                --center_in_gt \
                --batch_size_per_image 64 \
                --positive_fraction 0.5 \
