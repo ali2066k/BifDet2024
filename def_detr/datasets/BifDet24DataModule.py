@@ -1,20 +1,24 @@
+# ruff: noqa: F401
+import sys
 
 # import pytorch_lightning as pl
 import numpy as np
+from glob import glob
 import os
 import torch
 from monai.apps.detection.transforms.dictionary import ConvertBoxToStandardModed, AffineBoxToImageCoordinated, \
-    RandCropBoxByPosNegLabeld
+    ClipBoxToImaged, RandCropBoxByPosNegLabeld, SpatialCropBox, MaskToBoxd, BoxToMaskd
 from monai.data.utils import no_collation
 from monai.transforms import (
     Compose,
     LoadImaged,
     EnsureChannelFirstd,
     EnsureTyped,
+    DeleteItemsd,
     DivisiblePadd,
     CropForegroundd,
     ResizeWithPadOrCropd,
-    ScaleIntensityRanged,
+    RandSpatialCropd, ScaleIntensityRanged,
 )
 from monai.data import DataLoader, Dataset,CacheDataset, load_decathlon_datalist
 
@@ -41,7 +45,6 @@ class BifDet2024DataModule():
         self.compute_dtype = compute_dtype
 
     def prepare_data_monai(self) -> None:
-        # print(self.annotation_path)
         self.raw_train_set = load_decathlon_datalist(
             self.annotation_path,
             is_segmentation=False,
@@ -141,11 +144,11 @@ class BifDet2024DataModule():
         if dataset_library == 'monai':
             if self.params["CACHE_DS"]:
                 self.train_set = CacheDataset(data=list(np.array(self.raw_train_set)[perm][:18]), transform=self.train_transform)
-                # self.val_set = CacheDataset(data=self.train_set[12:], transform=self.val_transform)
+                # self.val_set = CacheDataset(data=self.train_set[-2:], transform=self.val_transform)
             else:
                 self.train_set = Dataset(data=list(np.array(self.raw_train_set)[perm][:18]), transform=self.train_transform)
+                # self.val_set = Dataset(data=self.train_set[-2:], transform=self.val_transform)
             self.val_set = Dataset(data=list(np.array(self.raw_train_set)[perm][18:]), transform=self.val_transform)
-
             # self.test_set = Dataset(data=self.test_files, transform=self.val_transform)
 
     def train_dataloader(self) -> DataLoader:

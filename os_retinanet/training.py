@@ -9,12 +9,10 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from torchsummary import summary
 import monai
 from monai.apps.detection.metrics.matching import matching_batch
 from monai.data import box_utils
-from monai.utils import set_determinism
-from monai.networks.nets import resnet, resnet50
+from monai.networks.nets import resnet
 from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape
 from monai.apps.detection.networks.retinanet_network import (
     RetinaNet,
@@ -26,6 +24,7 @@ from utils import GradualWarmupScheduler, visualize_one_xy_slice_in_3d_image, ma
 from BifDet24DataModule import BifDet2024DataModule
 from dotenv import load_dotenv, find_dotenv
 import datetime
+from pathlib import Path
 
 now = datetime.datetime.now()
 load_dotenv(find_dotenv("config.env"))
@@ -56,7 +55,7 @@ def main():
     # output file
     experiment_name = f"bifdet_{now.day}_{now.hour}_{now.minute}_{args.annot_fname.split('.')[0]}"
     exp_path = os.path.join(
-        f"{os.getenv('OUTPUT_PATH')}/",
+        args.exp_path,
         f"{experiment_name}_b{args.batch_size}_p{args.patch_size}_a{args.detection_per_img}_nms{args.nms_thresh}"
         f"_bs{args.score_thresh_glb}_lr{args.detector_lr}_e{args.max_epochs}_wcls{args.w_cls}_prtr{str(args.pre_trained)}/"
     )
@@ -64,11 +63,17 @@ def main():
     # Set device based on GPU availability
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
+    # fix the seed for reproducibility
+    seed = args.seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    monai.utils.misc.set_determinism(seed=seed)
+    print(f"seed fixed to {seed}")
     monai.config.print_config()
-    torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.benchmark = True
-    torch.set_num_threads(4)
+    # torch.backends.cudnn.enabled = False
+    # torch.backends.cudnn.benchmark = True
+    # torch.set_num_threads(4)
 
     print(os.getenv("DATA_SRC"))
     print(args.annot_fname)
@@ -77,7 +82,7 @@ def main():
     data_module = BifDet2024DataModule(
         train_parent_path=os.getenv("DATA_SRC"),
         batch_size=args.batch_size,
-        bbox_path=args.annot_fname,
+        bbox_path=Path(args.annot_fname),
         params=params_dict,
         compute_dtype=args.compute_dtype,
     )
@@ -140,6 +145,11 @@ def main():
         net = torch.jit.script(model_weights)
     print("Done!")
 
+    if args.resume:
+        print("Load the model weights...")
+        model_weights = torch.jit.load(Path(args.resume))
+        net = torch.jit.script(model_weights)
+
     # 3) build detector
     detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=args.debug).to(device)
 
@@ -167,6 +177,55 @@ def main():
         mode=args.sw_mode,
         device=device,
     )
+
+    if args.eval:
+        coco_metric = COCOMetric(classes=["Bifurcation"], iou_list=[0.1], max_detection=[250])
+        detector.eval()
+        val_outputs_all = []
+        val_targets_all = []
+        start_time = time.time()
+        with torch.no_grad():
+            for val_data in data_module.val_dataloader():
+                # if all val_data_i["image"] smaller than args.val_patch_size, no need to use inferer
+                # otherwise, need inferer to handle large input images.
+                use_inferer = not all(
+                    [val_data_i["image"][0, ...].numel() < np.prod(args.val_patch_size)
+                        for val_data_i in val_data]
+                )
+                val_inputs = [val_data_i.pop("image").to(device)
+                                for val_data_i in val_data]
+
+                if args.amp:
+                    with torch.cuda.amp.autocast():
+                        val_outputs = detector(val_inputs, use_inferer=use_inferer)
+                else:
+                    val_outputs = detector(val_inputs, use_inferer=use_inferer)
+                # save outputs for evaluation
+                val_outputs_all += val_outputs
+                val_targets_all += val_data
+        end_time = time.time()
+        print(f"Eval time: {end_time - start_time}s")
+
+        results_metric = matching_batch(
+                iou_fn=box_utils.box_iou,
+                iou_thresholds=coco_metric.iou_thresholds,
+                pred_boxes=[
+                    val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_outputs_all
+                ],
+                pred_classes=[
+                    val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_outputs_all
+                ],
+                pred_scores=[
+                    val_data_i[detector.pred_score_key].cpu().detach().numpy() for val_data_i in val_outputs_all
+                ],
+                gt_boxes=[val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_targets_all],
+                gt_classes=[
+                    val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_targets_all
+                ],
+            )
+        val_epoch_metric_dict = coco_metric(results_metric)[0]
+        print(val_epoch_metric_dict)
+        return
 
     # 4. Initialize training
     # initlize optimizer
@@ -271,24 +330,25 @@ def main():
         tensorboard_writer.add_scalar("train_lr", optimizer.param_groups[0]["lr"], epoch + 1)
 
         # save last trained model
-        torch.jit.save(detector.network, exp_path + f"/model/" + "_last.pt")
+        torch.jit.save(detector.network, exp_path + "/model/" + "_last.pt")
         print("saved last model")
         # ------------- Validation for model selection -------------
         if (epoch + 1) % args.val_interval == 0 and epoch > 30:
+        # if (epoch + 1) % args.val_interval == 0:
             detector.eval()
             val_outputs_all = []
             val_targets_all = []
             start_time = time.time()
             with torch.no_grad():
-                for val_data in data_module.train_dataloader():
+                for val_data in data_module.val_dataloader():
                     # if all val_data_i["image"] smaller than args.val_patch_size, no need to use inferer
                     # otherwise, need inferer to handle large input images.
                     use_inferer = not all(
-                        [val_data_ii["image"][0, ...].numel() < np.prod(args.val_patch_size)
-                         for val_data_i in val_data for val_data_ii in val_data_i]
+                        [val_data_i["image"][0, ...].numel() < np.prod(args.val_patch_size)
+                         for val_data_i in val_data]
                     )
-                    val_inputs = [val_data_ii.pop("image").to(device)
-                                  for val_data_i in val_data for val_data_ii in val_data_i]
+                    val_inputs = [val_data_i.pop("image").to(device)
+                                  for val_data_i in val_data]
 
                     if args.amp:
                         with torch.cuda.amp.autocast():
@@ -302,9 +362,9 @@ def main():
             print(f"Validation time: {end_time - start_time}s")
 
             # visualize an inference image and boxes to tensorboard
-            idx = random.sample(range(0, len(val_data[0][0]["boxes"])), 2)
+            idx = random.sample(range(0, len(val_data[0]["boxes"])), 2)
             draw_img_0 = visualize_one_xy_slice_in_3d_image(
-                gt_boxes=val_data[0][0]["boxes"].cpu().detach().numpy(),
+                gt_boxes=val_data[0]["boxes"].cpu().detach().numpy(),
                 image=val_inputs[0][0, ...].cpu().detach().numpy(),
                 pred_boxes=val_outputs[0][detector.target_box_key].cpu().detach().numpy(),
                 gt_box_index=idx[0],
@@ -315,7 +375,7 @@ def main():
             cv2.imwrite(filename_0, draw_img_0)
 
             draw_img_1 = visualize_one_xy_slice_in_3d_image(
-                gt_boxes=val_data[0][0]["boxes"].cpu().detach().numpy(),
+                gt_boxes=val_data[0]["boxes"].cpu().detach().numpy(),
                 image=val_inputs[0][0, ...].cpu().detach().numpy(),
                 pred_boxes=val_outputs[0][detector.target_box_key].cpu().detach().numpy(),
                 gt_box_index=idx[1],
@@ -340,9 +400,9 @@ def main():
                 pred_scores=[
                     val_data_i[detector.pred_score_key].cpu().detach().numpy() for val_data_i in val_outputs_all
                 ],
-                gt_boxes=[val_data_i[0][detector.target_box_key].cpu().detach().numpy() for val_data_i in val_targets_all],
+                gt_boxes=[val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_targets_all],
                 gt_classes=[
-                    val_data_i[0][detector.target_label_key].cpu().detach().numpy() for val_data_i in val_targets_all
+                    val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_targets_all
                 ],
             )
             val_epoch_metric_dict = coco_metric(results_metric)[0]
@@ -359,7 +419,7 @@ def main():
             if val_epoch_metric > best_val_epoch_metric:
                 best_val_epoch_metric = val_epoch_metric
                 best_val_epoch = epoch + 1
-                torch.jit.save(detector.network, exp_path + f"model/" + "_best.pt")
+                torch.jit.save(detector.network, exp_path + "model/" + "_best.pt")
                 print("saved new best metric model")
             print(
                 "current epoch: {} current metric: {:.4f} "
@@ -367,6 +427,7 @@ def main():
                     epoch + 1, val_epoch_metric, best_val_epoch_metric, best_val_epoch
                 )
             )
+            print(val_epoch_metric_dict)
     print(f"train completed, best_metric: {best_val_epoch_metric:.4f} " f"at epoch: {best_val_epoch}")
     tensorboard_writer.close()
 
@@ -409,7 +470,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=int(os.getenv('BATCH_SIZE')), help="size of dataset")
 
     # File paths
-    parser.add_argument("--exp_path", type=str, default="", help="The experiment path")
+    parser.add_argument("--exp_path", type=str, default=os.getenv('OUTPUT_PATH'), help="The experiment path")
     parser.add_argument("--model_weights_path", type=str, default="", help="The best model weight path")
 
     # Other options
@@ -417,6 +478,7 @@ def parse_args():
     parser.add_argument("--amp", action="store_true", default=False, help="For improving the training")
     parser.add_argument("--cache_ds", action="store_true", default=False, help="Caching dataset or not")
     parser.add_argument("--num_workers", type=int, default=1, help="validation running interval")
+    parser.add_argument('--seed', type=int, default=42)
 
     # torch options
     parser.add_argument("--annot_fname", type=str, default=os.getenv("ANNOT_FNAME"), help="torch hps")
@@ -456,6 +518,8 @@ def parse_args():
     parser.add_argument("--wu_scheduler_total_epoch", type=int, default=10, help="warmup scheduler hps")
 
     # Phase of the experiment
+    parser.add_argument('--resume', type=str)
+    parser.add_argument('--eval', action='store_true')
     parser.add_argument("--training", action="store_true", help="Run training phase")
     parser.add_argument("--validation", action="store_true", help="Run validation phase")
     parser.add_argument("--testing", action="store_true", help="Run testing phase")
