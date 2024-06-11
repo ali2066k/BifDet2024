@@ -27,7 +27,7 @@ python data_setup.py --src_base_dir "path_to_ATM22/TrainBatch1/" --base_dir "pat
 
 Replace "path_to_ATM22/TrainBatch1/" and "path_to_BifDet_Dataset/" with the actual paths to your datasets. For example:
 
-python data_setup.py --src_base_dir "D:/datasets/ATM22/TrainBatch1/" --base_dir "C:/Users/ALike/Documents/PHD/code/bifdet2024/exp/"
+python data_setup.py --src_base_dir "./ATM22/TrainBatch1/" --base_dir "./bifdet2024/exp/"
 
 **Script Explanation**
 
@@ -47,7 +47,7 @@ Save Processed Data: Saves the processed data into JSON files for training.
 
 The script generates JSON files in the specified base_dir with the following naming convention:
 
-BifDet_lbl{lbl_tag}_min_{min_s}.json 
+```BifDet_lbl{lbl_tag}_min_{min_s}.json```
 
 (lbl_tag is always 1 and min_s is the minimum cubic size for the bounding boxes)
 
