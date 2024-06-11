@@ -3,17 +3,41 @@
 1. **Download the BifDet Dataset**:
    Download the BifDet dataset from the following link:
    [BifDet Dataset](https://...)
+   Ensure it is extracted to an accessible directory. The structure should look like this:
 
-2. **Download the ATM22 Dataset**:
+   ```
+BifDet_Dataset/
+├── BifDet_001/
+│   ├── imagesTr/
+│   ├── labelsTr/
+│   ├── lungsTr/
+│   ├── render/
+│   └── boxes/
+├── BifDet_002/
+│   ├── imagesTr/
+│   ├── labelsTr/
+│   ├── lungsTr/
+│   ├── render/
+│   └── boxes/
+└── ...
+
+
+3. **Download the ATM22 Dataset**:
    Download the ATM22 dataset from the following link:
    [ATM22 Challenge website](https://...)
    Ensure it is extracted to an accessible directory. The structure should look like this:
 
-   ```plaintext
+   ```
    ATM22/
    └── TrainBatch1/
        ├── imagesTr/
+       │   ├── ATM_001_0000.nii.gz
+       │   ├── ATM_002_0000.nii.gz
+       │   └── ...
        ├── labelsTr/
+       │   ├── ATM_001_0000.nii.gz
+       │   ├── ATM_002_0000.nii.gz
+       │   └── ...
 
 
 Run the Data Setup Script:
