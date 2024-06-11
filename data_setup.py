@@ -146,3 +146,8 @@ def main():
             with open(json_save_path, 'w') as outfile:
                 json.dump(par_d, outfile)
             print("="*20)
+
+
+
+
+# python data_setup.py --src_base_dir "./ATM22/TrainBatch1/" --base_dir "./exp/"
