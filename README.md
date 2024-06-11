@@ -1,4 +1,14 @@
-# Running the Data Setup Script
-The data setup script data_setup.py will copy the necessary files and prepare the dataset for training. It will also filter bounding boxes based on size and create JSON files with the processed data.
+## Preparing the Dataset
 
-Run the script using the following command:
+1. **Download the BifDet Dataset**:
+   Download the BifDet dataset from the following link:
+   [BifDet Dataset Download](https://...)
+
+2. **Download the ATM22 Dataset**:
+   Download the ATM22 dataset [ATM22 Challenge Website](https://...) and ensure it is extracted to an accessible directory. The structure should look like this:
+
+   ```plaintext
+   ATM22/
+   └── TrainBatch1/
+       ├── imagesTr/
+       ├── labelsTr/
