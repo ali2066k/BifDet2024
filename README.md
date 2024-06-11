@@ -30,11 +30,16 @@ python data_setup.py --src_base_dir "D:/datasets/ATM22/TrainBatch1/" --base_dir 
 The data_setup.py script performs the following tasks:
 
 Load Case Mapping: Reads the case mapping from case_mapping.json.
+
 Create Directory Structure: Creates the necessary directories for each BifDet case.
+
 Copy Files: Copies the CT scan nifti files and airway segmentation ground-truth nifti files from the ATM22 dataset to the BifDet dataset.
+
 Load and Filter Bounding Boxes: Loads bounding boxes from JSON files, filters them based on size, and converts coordinates.
+
 Save Processed Data: Saves the processed data into JSON files for training.
-Output
+
+**Output**
 The script generates JSON files in the specified base_dir with the following naming convention:
 BifDet_lbl{lbl_tag}_min_{min_s}.json (lbl_tag is always 1 and min_s is the minimum cubic size for the bounding boxes)
 Each JSON file contains the processed data for training.
