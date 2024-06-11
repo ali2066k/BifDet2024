@@ -6,20 +6,20 @@
    Ensure it is extracted to an accessible directory. The structure should look like this:
 
    ```
-BifDet_Dataset/
-├── BifDet_001/
-│   ├── imagesTr/
-│   ├── labelsTr/
-│   ├── lungsTr/
-│   ├── render/
-│   └── boxes/
-├── BifDet_002/
-│   ├── imagesTr/
-│   ├── labelsTr/
-│   ├── lungsTr/
-│   ├── render/
-│   └── boxes/
-└── ...
+   BifDet_Dataset/
+   ├── BifDet_001/
+   │   ├── imagesTr/
+   │   ├── labelsTr/
+   │   ├── lungsTr/
+   │   ├── render/
+   │   └── boxes/
+   ├── BifDet_002/
+   │   ├── imagesTr/
+   │   ├── labelsTr/
+   │   ├── lungsTr/
+   │   ├── render/
+   │   └── boxes/
+   └── ...
 
 
 3. **Download the ATM22 Dataset**:
