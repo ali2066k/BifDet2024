@@ -27,6 +27,7 @@ Replace "path_to_ATM22/TrainBatch1/" and "path_to_BifDet_Dataset/" with the actu
 python data_setup.py --src_base_dir "D:/datasets/ATM22/TrainBatch1/" --base_dir "C:/Users/ALike/Documents/PHD/code/bifdet2024/exp/"
 
 **Script Explanation**
+
 The data_setup.py script performs the following tasks:
 
 Load Case Mapping: Reads the case mapping from case_mapping.json.
@@ -40,8 +41,13 @@ Load and Filter Bounding Boxes: Loads bounding boxes from JSON files, filters th
 Save Processed Data: Saves the processed data into JSON files for training.
 
 **Output**
+
 The script generates JSON files in the specified base_dir with the following naming convention:
-BifDet_lbl{lbl_tag}_min_{min_s}.json (lbl_tag is always 1 and min_s is the minimum cubic size for the bounding boxes)
+
+BifDet_lbl{lbl_tag}_min_{min_s}.json 
+
+(lbl_tag is always 1 and min_s is the minimum cubic size for the bounding boxes)
+
 Each JSON file contains the processed data for training.
 
 Notes
