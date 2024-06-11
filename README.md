@@ -21,8 +21,9 @@ The data setup script data_setup.py will copy the necessary files and prepare th
 
 Run the script using the following command:
 
-```plaintext
+```
 python data_setup.py --src_base_dir "path_to_ATM22/TrainBatch1/" --base_dir "path_to_BifDet_Dataset/"
+```
 
 Replace "path_to_ATM22/TrainBatch1/" and "path_to_BifDet_Dataset/" with the actual paths to your datasets. For example:
 
