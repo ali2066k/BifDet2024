@@ -116,31 +116,6 @@ def load_points(data_point, lbl, MIN_SIZES=[1, 1, 1]):
     else:
         return [*center_lps, *size_lps]  # Return center and size in original LPS units
 
-def prepare_bifdet_dataset(src_base_dir, dest_base_dir, case_mapping_file, min_sizes, lbl_tags=[1]):
-    """
-    Prepares the BifDet dataset by copying NIfTI files, generating training data, and saving JSON files.
-
-    Args:
-        src_base_dir (str): Path to the base directory of the source dataset (ATM22).
-        dest_base_dir (str): Path to the base directory where the BifDet dataset will be created.
-        case_mapping_file (str): Path to the JSON file containing the case mappings.
-        min_sizes (list): List of minimum sizes for filtering bounding boxes.
-        lbl_tags (list, optional): List of label tags to use. Defaults to [1].
-    """
-    # Iterate over cases
-    for bifdet_case, atm_case in case_mapping.items():
-        print(f"Processing case: {bifdet_case}")
-
-        # Copy NIfTI files (image, label, lung) to corresponding subdirectories
-        for src_dir, dest_subdir in zip(
-            [src_images_dir, src_labels_dir, src_labels_dir], subdirs
-        ):
-            src_file = os.path.join(src_dir, f"{atm_case}_0000.nii.gz")
-            dest_file = os.path.join(
-                dest_base_dir, dest_subdir, f"{atm_case}_0000.nii.gz"
-            )
-            shutil.copy(src_file, dest_file)
-            print(f"  Copied to: {dest_file}")
             
 def main():
     parser = argparse.ArgumentParser(description="Setup BifDet dataset from ATM22 dataset.")
@@ -191,3 +166,9 @@ def main():
             with open(json_save_path, 'w') as outfile:
                 json.dump(par_d, outfile)
             print("="*20)
+
+
+
+
+if __name__ == "__main__":
+    main()
