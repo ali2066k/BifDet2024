@@ -36,6 +36,9 @@ def copy_files(case_mapping, src_images_dir, src_labels_dir, dest_base_dir):
         print(dest_label_file)
         print("="*30)
 
+
+        
+
         
 def load_bboxes(path, lbl_air_path, case_mapping, min_dim_sizes=[1,1,1], lbl_tag=0):
     """Loads bounding boxes from JSON files and filters based on size."""
@@ -117,6 +120,32 @@ def load_points(data_point, lbl, MIN_SIZES=[1, 1, 1]):
     else:
         return [*center_lps, *size_lps]  # Return center and size in original LPS units
 
+def prepare_bifdet_dataset(src_base_dir, dest_base_dir, case_mapping_file, min_sizes, lbl_tags=[1]):
+    """
+    Prepares the BifDet dataset by copying NIfTI files, generating training data, and saving JSON files.
+
+    Args:
+        src_base_dir (str): Path to the base directory of the source dataset (ATM22).
+        dest_base_dir (str): Path to the base directory where the BifDet dataset will be created.
+        case_mapping_file (str): Path to the JSON file containing the case mappings.
+        min_sizes (list): List of minimum sizes for filtering bounding boxes.
+        lbl_tags (list, optional): List of label tags to use. Defaults to [1].
+    """
+    # Iterate over cases
+    for bifdet_case, atm_case in case_mapping.items():
+        print(f"Processing case: {bifdet_case}")
+
+        # Copy NIfTI files (image, label, lung) to corresponding subdirectories
+        for src_dir, dest_subdir in zip(
+            [src_images_dir, src_labels_dir, src_labels_dir], subdirs
+        ):
+            src_file = os.path.join(src_dir, f"{atm_case}_0000.nii.gz")
+            dest_file = os.path.join(
+                dest_base_dir, dest_subdir, f"{atm_case}_0000.nii.gz"
+            )
+            shutil.copy(src_file, dest_file)
+            print(f"  Copied to: {dest_file}")
+            
 def main():
     parser = argparse.ArgumentParser(description="Setup BifDet dataset from ATM22 dataset.")
     parser.add_argument('--atm22_path', type=str, required=True, help='Path to the base directory of the ATM22 dataset')
@@ -129,10 +158,30 @@ def main():
     base_dir = args.destination_base_dir
     dest_base_dir = os.path.join(base_dir, 'BifDet_Dataset')
     case_mapping_file = os.path.join(base_dir, 'case_mapping.json')
-
+    os.makedirs(dest_base_dir, exist_ok=True)
+    
     case_mapping = load_case_mapping(case_mapping_file)
     copy_files(case_mapping, src_images_dir, src_labels_dir, dest_base_dir)
     
+    training_dir = os.path.join(base_dir, "training")
+    os.makedirs(training_dir, exist_ok=True)
+    subdirs = ["imagesTr", "labelsTr", "lungsTr"]
+    for subdir in subdirs:
+        os.makedirs(os.path.join(training_dir, subdir), exist_ok=True)
+        # Iterate over cases, copying files and generating annotations
+    for bifdet_case, atm_case in case_mapping.items():
+        print(f"Processing case: {bifdet_case}")
+
+        # Copy NIfTI files
+        for src_dir, dest_subdir in zip(
+            [src_images_dir, src_labels_dir], ["imagesTr", "labelsTr"]
+        ):
+            src_file = os.path.join(src_dir, f"{atm_case}_0000.nii.gz")
+            dest_file = os.path.join(training_dir, dest_subdir, f"{atm_case}_0000.nii.gz")
+            shutil.copy(src_file, dest_file)
+            print(f"{src_file}  Copied to: {dest_file}")
+        
+        
     min_ss = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     lbl_tags = [1]
     for lbl_tag in lbl_tags:
@@ -142,12 +191,7 @@ def main():
             par_d = {
                 "training": d
             }
-            json_save_path = os.path.join(base_dir, f'BifDet_lbl{lbl_tag}_min_{min_s}.json')
+            json_save_path = os.path.join(base_dir, f'training/BifDet_lbl{lbl_tag}_min_{min_s}.json')
             with open(json_save_path, 'w') as outfile:
                 json.dump(par_d, outfile)
             print("="*20)
-
-
-
-
-# python data_setup.py --src_base_dir "./ATM22/TrainBatch1/" --base_dir "./exp/"
