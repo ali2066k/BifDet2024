@@ -35,11 +35,7 @@ def copy_files(case_mapping, src_images_dir, src_labels_dir, dest_base_dir):
         shutil.copy(src_label_file, dest_label_file)
         print(dest_label_file)
         print("="*30)
-
-
-        
-
-        
+  
 def load_bboxes(path, lbl_air_path, case_mapping, min_dim_sizes=[1,1,1], lbl_tag=0):
     """Loads bounding boxes from JSON files and filters based on size."""
     list_of_dict = []
