@@ -62,6 +62,7 @@ To set up the project, clone the repository and install the necessary dependenci
 git clone https://github.com/your_username/BifDet.git
 cd BifDet
 pip install -r requirements.txt
+```
 
 
 ## Preparing the Dataset
