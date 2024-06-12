@@ -153,3 +153,15 @@ Notes
 Ensure that the paths provided to the script are correct and the directories exist.
 The script includes print statements to provide feedback on the progress of the file processing and bounding box filtering.
 By following these steps, you will have the BifDet dataset ready for training.
+
+Results
+The results demonstrate the challenges and potential in developing methods for 3D bifurcation detection, particularly for small objects in crowded regions. The baseline models establish a benchmark for further development and evaluation.
+
+Acknowledgments
+This research was funded by the Doctoral School of IP Paris and Hi!Paris, and utilized HPC resources from GENCI-IDRIS (Grant 2023-AD011013999). We acknowledge the support of the National Institutes of Health (NIH) under grant R01-HL155816 and the ATM22 organizers for their invaluable efforts.
+
+License
+This dataset is released under the Creative Commons BY-NC-SA 4.0 license.
+
+
+For more detailed documentation and information, please refer to the full paper.
