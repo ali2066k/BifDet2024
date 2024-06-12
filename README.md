@@ -154,6 +154,8 @@ Ensure that the paths provided to the script are correct and the directories exi
 The script includes print statements to provide feedback on the progress of the file processing and bounding box filtering.
 By following these steps, you will have the BifDet dataset ready for training.
 
+## Run the pipeline
+
 ## Acknowledgments
 This research was funded by the Doctoral School of IP Paris and Hi!Paris, and utilized HPC resources from GENCI-IDRIS (Grant 2023-AD011013999). We acknowledge the support of the National Institutes of Health (NIH) under grant R01-HL155816 and the ATM22 organizers for their invaluable efforts.
 
