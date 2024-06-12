@@ -6,21 +6,26 @@
    Ensure it is extracted to an accessible directory. The structure should look like this:
 
    ```
-   BifDet_Dataset/
-   ├── BifDet_001/
-   │   ├── imagesTr/
-   │   ├── labelsTr/
-   │   ├── lungsTr/
-   │   ├── render/
-   │   └── boxes/
-   ├── BifDet_002/
-   │   ├── imagesTr/
-   │   ├── labelsTr/
-   │   ├── lungsTr/
-   │   ├── render/
-   │   └── boxes/
-   └── ...
-
+   release
+   ├── BifDet_Dataset/
+      ├── BifDet_001/
+      │   ├── imagesTr/
+      │   ├── labelsTr/
+      │   ├── lungsTr/
+      │   ├── render/
+      │   └── boxes/
+      ├── BifDet_002/
+      │   ├── imagesTr/
+      │   ├── labelsTr/
+      │   ├── lungsTr/
+      │   ├── render/
+      │   └── boxes/
+      └── ...
+   ├── training
+      │   ├── imagesTr/
+      │   ├── labelsTr/
+      │   ├── lungsTr/
+      │   ├── annotation JSON files for different setups 
 
 3. **Download the ATM22 Dataset**:
    Download the ATM22 dataset from the following link:
