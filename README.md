@@ -1,3 +1,13 @@
+BifDet: A 3D Bifurcation Detection Dataset for Airway-Tree Modeling
+This repository contains the BifDet dataset, the first publicly available dataset specialized for 3D airway bifurcation detection in thoracic Computed Tomography (CT) scans. Bifurcations, the points where airways diverge, are crucial for understanding lung physiology and disease mechanisms.
+
+Key Features
+3D Bifurcation Bounding Boxes: Carefully annotated CT scans with precise bifurcation bounding boxes covering the parent and daughter nodes.
+Tailored Detection Task: A standardized framework for 3D airway bifurcation detection.
+Comprehensive Pipeline: Detailed methodological pipeline, including preprocessing steps and code implementations using the MONAI framework.
+Baseline Models: Benchmark models across various object detection categories (RetinaNet, Deformable DETR) to facilitate future research.
+
+
 ## Preparing the Dataset
 
 1. **Download the BifDet Dataset**:
