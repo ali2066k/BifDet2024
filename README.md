@@ -21,6 +21,7 @@ This repository contains the BifDet dataset, the first publicly available datase
   - [Running the Code](#running-the-code)
   - [Preparing the Dataset](#preparing-the-dataset)
   - [Run the pipeline](#run-pipeline)
+  - [Loading BifDet Data into 3D Slicer](#Loading-BifDet-Data-into-3D-Slicer)
 - [Acknowledgments](#acknowledgments)
 - [License](#license)
 
