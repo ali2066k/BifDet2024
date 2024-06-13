@@ -34,7 +34,7 @@ BifDet presents a novel approach to 3D airway bifurcation detection, providing a
 
 The BifDet dataset is derived from the ATM22 dataset, specifically utilizing 22 cases from the 300 publicly available CT scans. Each case includes segmentation masks for the trachea, main bronchi, lobar bronchi, and distal segmental bronchi.
 
-![Annotation Pipeline](PUT_IMAGE_ADDRESS_HERE)
+![Annotation Pipeline](/img/annot_pipeline.pdf)
 
 ### Bifurcation Annotation
 
