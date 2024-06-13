@@ -156,6 +156,34 @@ By following these steps, you will have the BifDet dataset ready for training.
 
 ## Run the pipeline
 
+## Loading BifDet Data into 3D Slicer
+
+Prerequisites:
+
+3D Slicer: Make sure you have 3D Slicer installed. You can download it from https://download.slicer.org/.
+BifDet & ATM22 Datasets: Ensure you have downloaded and prepared both the BifDet and ATM22 datasets as described in the "Preparing the Dataset" section of your repository.
+Steps:
+
+Load CT Scan (imagesTr):
+
+In 3D Slicer, go to "File" -> "Add Data."
+Navigate to the imagesTr folder of the desired BifDet case (e.g., BifDet_Dataset/BifDet_001/imagesTr).
+Select the .nii.gz file containing the CT scan data.
+Click "Add."
+
+Load Airway Segmentation Ground Truth (labelsTr):
+
+Repeat the same steps as above, but select the .nii.gz file from the labelsTr folder of the same case and choose "Segmentation" as the description when loading the file. This will load the ground truth segmentation.
+
+Load 3D Rendering (render):
+
+Go to "File" -> "Add Data."
+Navigate to the render folder and select the 3D model .vtk file.
+Click "Add."
+
+Load Bounding Boxes (boxes):
+Same procedure and load the json files from "boxes" directory
+
 ## Acknowledgments
 This research was funded by the Doctoral School of IP Paris and Hi!Paris, and utilized HPC resources from GENCI-IDRIS (Grant 2023-AD011013999). We acknowledge the support of the National Institutes of Health (NIH) under grant R01-HL155816 and the ATM22 organizers for their invaluable efforts.
 
