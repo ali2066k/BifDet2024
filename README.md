@@ -155,7 +155,7 @@ Ensure that the paths provided to the script are correct and the directories exi
 The script includes print statements to provide feedback on the progress of the file processing and bounding box filtering.
 By following these steps, you will have the BifDet dataset ready for training.
 
-## Run the pipeline
+
 
 ## Loading BifDet Data into 3D Slicer
 
