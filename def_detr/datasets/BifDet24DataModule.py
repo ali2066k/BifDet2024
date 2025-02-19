@@ -41,7 +41,8 @@ class BifDet2024DataModule():
         self.test_set = None
         self.val_set = None
         self.params = params
-        self.max_cardinality = 22
+         # self.max_cardinality = 22
+        self.nb_train = 33
         self.compute_dtype = compute_dtype
 
     def prepare_data_monai(self) -> None:
@@ -72,7 +73,7 @@ class BifDet2024DataModule():
                                      b_max=self.params['PIXEL_NORM_MAX'], clip=True),
                 ConvertBoxToStandardModed(box_keys=['boxes'], mode="cccwhd"),
                 CropForegroundd(keys=['image', 'lung'], source_key='lung', allow_smaller=False),
-                DivisiblePadd(keys=['image'], k=self.params["PATCH_SIZE"]),
+                DivisiblePadd(keys=['image','lung'], k=self.params["PATCH_SIZE"]),
                 AffineBoxToImageCoordinated(
                     box_keys=['boxes'],
                     box_ref_image_keys='image',
@@ -80,7 +81,7 @@ class BifDet2024DataModule():
                     affine_lps_to_ras=True,
                 ),
                 RandCropBoxByPosNegLabeld(
-                    image_keys=['image'],
+                    image_keys=['image','lung'],
                     box_keys='boxes',
                     label_keys='label',
                     spatial_size=self.params["PATCH_SIZE"],
@@ -109,7 +110,7 @@ class BifDet2024DataModule():
                 ConvertBoxToStandardModed(box_keys=['boxes'], mode="cccwhd"),
                 CropForegroundd(keys=['image', 'lung'], source_key='lung', allow_smaller=False),
                 # DivisiblePadd(keys=['image'], k=self.params["PATCH_SIZE"]),
-                ResizeWithPadOrCropd(keys=['image'], spatial_size=self.params['VAL_PATCH_SIZE']),
+                ResizeWithPadOrCropd(keys=['image', 'lung'], spatial_size=self.params['VAL_PATCH_SIZE']),
                 # RandCropBoxByPosNegLabeld(
                 #     image_keys=['image'],
                 #     box_keys='boxes',
@@ -127,6 +128,7 @@ class BifDet2024DataModule():
                     image_meta_key_postfix="meta_dict",
                     affine_lps_to_ras=True,
                 ),
+                ClipBoxToImaged(box_keys="boxes", box_ref_image_keys="image", label_keys=["label"], remove_empty=True),
                 EnsureTyped(keys=['image', 'lung', 'boxes'], dtype=self.compute_dtype),
                 EnsureTyped(keys=['label'], dtype=torch.long),
             ]
@@ -140,15 +142,16 @@ class BifDet2024DataModule():
 
         rng = np.random.default_rng(seed=0)
         perm = rng.permutation(self.max_cardinality)
+        print(f"Patients for training: {list(np.array([raw_data['case_name'] for raw_data in self.raw_train_set])[perm][:self.nb_train])}")
+
 
         if dataset_library == 'monai':
             if self.params["CACHE_DS"]:
-                self.train_set = CacheDataset(data=list(np.array(self.raw_train_set)[perm][:18]), transform=self.train_transform)
-                # self.val_set = CacheDataset(data=self.train_set[-2:], transform=self.val_transform)
+                self.train_set = CacheDataset(data=np.array(self.raw_train_set)[perm][:self.nb_train], transform=self.train_transform)
+            #     # self.val_set = CacheDataset(data=self.train_set[12:], transform=self.val_transform)
             else:
-                self.train_set = Dataset(data=list(np.array(self.raw_train_set)[perm][:18]), transform=self.train_transform)
-                # self.val_set = Dataset(data=self.train_set[-2:], transform=self.val_transform)
-            self.val_set = Dataset(data=list(np.array(self.raw_train_set)[perm][18:]), transform=self.val_transform)
+                self.train_set = Dataset(data=np.array(self.raw_train_set)[perm][:self.nb_train], transform=self.train_transform)
+            self.val_set = Dataset(data=np.array(self.raw_train_set)[perm][self.nb_train:], transform=self.val_transform)
             # self.test_set = Dataset(data=self.test_files, transform=self.val_transform)
 
     def train_dataloader(self) -> DataLoader:

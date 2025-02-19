@@ -126,6 +126,7 @@ def main():
     src_base_dir = args.atm22_path
     src_images_dir = os.path.join(src_base_dir, "imagesTr")
     src_labels_dir = os.path.join(src_base_dir, "labelsTr")
+    src_lungs_dir = os.path.join(src_base_dir, "lungsTr")
     base_dir = args.destination_base_dir
     dest_base_dir = os.path.join(base_dir, 'BifDet_Dataset')
     case_mapping_file = os.path.join(base_dir, 'case_mapping.json')
@@ -145,7 +146,7 @@ def main():
 
         # Copy NIfTI files
         for src_dir, dest_subdir in zip(
-            [src_images_dir, src_labels_dir], ["imagesTr", "labelsTr"]
+            [src_images_dir, src_labels_dir, src_lungs_dir], ["imagesTr", "labelsTr", "lungsTr"]
         ):
             src_file = os.path.join(src_dir, f"{atm_case}_0000.nii.gz")
             dest_file = os.path.join(training_dir, dest_subdir, f"{atm_case}_0000.nii.gz")
@@ -154,7 +155,7 @@ def main():
         
         
     min_ss = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    lbl_tags = [1]
+    lbl_tags = [0] # [1]
     for lbl_tag in lbl_tags:
         for min_s in min_ss:
             MIN_SIZES = [min_s, min_s, min_s]  # Minimum sizes for x, y, and z dimensions respectively

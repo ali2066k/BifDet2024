@@ -9,21 +9,25 @@ This repository contains the BifDet dataset, the first publicly available datase
 - **Baseline Models**: Benchmark models across various object detection categories (RetinaNet, Deformable DETR) to facilitate future research.
 
 ## Table of Contents
-- [Introduction](#introduction)
-- [Dataset](#dataset)
-  - [Data Acquisition](#data-acquisition)
-  - [Bifurcation Annotation](#bifurcation-annotation)
-- [Methodology](#methodology)
-  - [Feature Extraction](#feature-extraction)
-  - [Detection Methods](#detection-methods)
-- [Usage](#usage)
-  - [Installation](#installation)
-  - [Running the Code](#running-the-code)
+- [BifDet: A 3D Bifurcation Detection Dataset for Airway-Tree Modeling](#bifdet-a-3d-bifurcation-detection-dataset-for-airway-tree-modeling)
+  - [Key Features](#key-features)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Dataset](#dataset)
+    - [Data Acquisition](#data-acquisition)
+    - [Bifurcation Annotation](#bifurcation-annotation)
+  - [Methodology](#methodology)
+    - [Feature Extraction](#feature-extraction)
+    - [Detection Methods](#detection-methods)
+      - [RetinaNet for 3D Bifurcation Detection](#retinanet-for-3d-bifurcation-detection)
+  - [Usage](#usage)
+    - [Installation](#installation)
   - [Preparing the Dataset](#preparing-the-dataset)
-  - [Run the pipeline](#run-pipeline)
-  - [Loading BifDet Data into 3D Slicer](#Loading-BifDet-Data-into-3D-Slicer)
-- [Acknowledgments](#acknowledgments)
-- [License](#license)
+  - [Loading BifDet Data into 3D Slicer](#loading-bifdet-data-into-3d-slicer)
+  - [Training RetinaNet on BifDet](#training-retinanet-on-bifdet)
+  - [Training DefDETR on BifDET](#training-defdetr-on-bifdet)
+  - [Acknowledgments](#acknowledgments)
+  - [License](#license)
 
 ## Introduction
 
@@ -64,7 +68,11 @@ git clone https://github.com/your_username/BifDet.git
 cd BifDet
 pip install -r requirements.txt
 ```
+You can also install the packages within a new conda environment directly with:
 
+```bash
+conda env create -f environment.yml
+```
 
 ## Preparing the Dataset
 
@@ -184,6 +192,26 @@ Click "Add."
 
 Load Bounding Boxes (boxes):
 Same procedure and load the json files from "boxes" directory
+
+## Training RetinaNet on BifDet
+
+1. Update the paths in `os_retinanet/config.env` :
+   - **Output path** `OUTPUT_PATH`: Indicate where checkpoints and logs will be saved. Should be set to a specific folder in your working directory.
+   - **Data path** `DATA_SRC`: Indicate where the BifDet dataset is located. 
+   - **Annotaton path** `ANNOT_FNAME`: Indicate the *name* of the json file containing all the annotations. This json file should be located in the folder of the BifDet dataset. The annotations will be loaded as `DATA_SRC/ANNOT_FNAME`.
+2. Run the training script `os_retinanet/run.sh`.
+   - Default hyperparameters used for experiments in the paper are already set as arguments in the training script.
+3. Evaluation can be done using the same script with the flags `--eval` and `--resume PATH_TO_CKPT`
+
+## Training DefDETR on BifDET
+
+1. Compile CUDA operations for the deformable attention module.
+   - Run `./def_detr/models/transoar/ops/make.sh` to install, then `./def_detr/models/transoar/ops/test.py` to verify installation.
+   - Setup and test files can be found in `./def_detr/models/transoar/ops/setup.py` and `./def_detr/models/transoar/ops/test.py`
+   - Refer to [transoar github](https://github.com/bwittmann/transoar) or [original Deformable DETR github](https://github.com/fundamentalvision/Deformable-DETR) for more informations.
+2. Update the paths in `def_detr/config.env`
+3. Run the training script `def_detr/training.py`.
+4. Evaluation can be done using the same script with the flags `--eval` and `--resume PATH_TO_CKPT`
 
 ## Acknowledgments
 This research was funded by the Doctoral School of IP Paris and Hi!Paris, and utilized HPC resources from GENCI-IDRIS (Grant 2023-AD011013999). We acknowledge the support of the National Institutes of Health (NIH) under grant R01-HL155816 and the ATM22 organizers for their invaluable efforts.
