@@ -71,9 +71,6 @@ def main():
     monai.utils.misc.set_determinism(seed=seed)
     print(f"seed fixed to {seed}")
     monai.config.print_config()
-    # torch.backends.cudnn.enabled = False
-    # torch.backends.cudnn.benchmark = True
-    # torch.set_num_threads(4)
 
     print(os.getenv("DATA_SRC"))
     print(args.annot_fname)
@@ -112,12 +109,6 @@ def main():
         conv1_t_size=conv1_t_size,
     )
 
-    # check the model summary
-    # input_size = (1, 256, 256, 256)  # Change according to your input size
-    # Use torchsummary to print the model summary
-    # summary(model=backbone.to(device), input_size=input_size, device="cuda" if torch.cuda.is_available() else "cpu")
-    # sys.exit()
-
     feature_extractor = resnet_fpn_feature_extractor(
         backbone=backbone,
         spatial_dims=3,
@@ -143,12 +134,13 @@ def main():
         model_weights = torch.jit.load(
             '/home/infres/akeshavarzi/data/outputs/luna16/pretraining4ATM22/trained_modelsmodel_best.pt')
         net = torch.jit.script(model_weights)
-    print("Done!")
+        print("Done!")
 
     if args.resume:
         print("Load the model weights...")
         model_weights = torch.jit.load(Path(args.resume))
         net = torch.jit.script(model_weights)
+        print("Done!")
 
     # 3) build detector
     detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=args.debug).to(device)
@@ -179,7 +171,7 @@ def main():
     )
 
     if args.eval:
-        coco_metric = COCOMetric(classes=["Bifurcation"], iou_list=[0.1], max_detection=[250])
+        coco_metric = COCOMetric(classes=["Bifurcation"], iou_list=[0.1, 0.25, 0.5], max_detection=[300])
         detector.eval()
         val_outputs_all = []
         val_targets_all = []
@@ -189,7 +181,7 @@ def main():
                 # if all val_data_i["image"] smaller than args.val_patch_size, no need to use inferer
                 # otherwise, need inferer to handle large input images.
                 use_inferer = not all(
-                    [val_data_i["image"][0, ...].numel() < np.prod(args.val_patch_size)
+                    [val_data_i["image"][0, ...].numel() <= (args.val_patch_size * args.val_patch_size * args.val_patch_size)
                         for val_data_i in val_data]
                 )
                 val_inputs = [val_data_i.pop("image").to(device)
@@ -203,25 +195,39 @@ def main():
                 # save outputs for evaluation
                 val_outputs_all += val_outputs
                 val_targets_all += val_data
+                val_inputs_all += val_inputs
         end_time = time.time()
         print(f"Eval time: {end_time - start_time}s")
+
+        out_boxes_all = [val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_outputs_all]
+        out_cls_all = [val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_outputs_all]
+        out_scores_all = [val_data_i[detector.pred_score_key].cpu().detach().numpy() for val_data_i in val_outputs_all]
+        gt_boxes_all = [val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_targets_all]
+        gt_cls_all = [val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_targets_all]
+        inputs_all = [val_data_i.cpu().detach().numpy() for val_data_i in val_inputs_all]
+
+        if args.save_preds:
+            for i in range(len(out_boxes_all)):
+                np.save(exp_path + f"/pred_boxes_{i}.npy", np.array(out_boxes_all[i]))
+            for i in range(len(out_cls_all)):
+                np.save(exp_path + f"/pred_classes_{i}.npy", np.array(out_cls_all[i]))
+            for i in range(len(out_scores_all)):
+                np.save(exp_path + f"/pred_scores_{i}.npy", np.array(out_scores_all[i]))
+            for i in range(len(gt_boxes_all)):
+                np.save(exp_path + f"/gt_boxes_{i}.npy", np.array(gt_boxes_all[i]))
+            for i in range(len(gt_cls_all)):
+                np.save(exp_path + f"/gt_cls_all_{i}.npy", np.array(gt_cls_all[i]))
+            np.save(exp_path + "/inputs.npy", np.array(inputs_all))
+
 
         results_metric = matching_batch(
                 iou_fn=box_utils.box_iou,
                 iou_thresholds=coco_metric.iou_thresholds,
-                pred_boxes=[
-                    val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_outputs_all
-                ],
-                pred_classes=[
-                    val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_outputs_all
-                ],
-                pred_scores=[
-                    val_data_i[detector.pred_score_key].cpu().detach().numpy() for val_data_i in val_outputs_all
-                ],
-                gt_boxes=[val_data_i[detector.target_box_key].cpu().detach().numpy() for val_data_i in val_targets_all],
-                gt_classes=[
-                    val_data_i[detector.target_label_key].cpu().detach().numpy() for val_data_i in val_targets_all
-                ],
+                pred_boxes=out_boxes_all,
+                pred_classes=out_cls_all,
+                pred_scores=out_scores_all,
+                gt_boxes=gt_boxes_all,
+                gt_classes=gt_cls_all,
             )
         val_epoch_metric_dict = coco_metric(results_metric)[0]
         print(val_epoch_metric_dict)
@@ -276,20 +282,15 @@ def main():
             step += 1
             inputs = [
                 batch_data_ii["image"].to(device) for batch_data_i in batch_data for batch_data_ii in batch_data_i
-                # batch_data_i["image"].to(device) for batch_data_i in batch_data
             ]
-            # print(inputs[0].shape)
             targets = [
                 dict(
                     label=batch_data_ii["label"].to(device),
                     boxes=batch_data_ii["boxes"].to(device),
-                    # label=batch_data_i["label"].to(device),
-                    # boxes=batch_data_i["boxes"].to(device),
                 )
                 for batch_data_i in batch_data
                 for batch_data_ii in batch_data_i
             ]
-            # print(targets[0])
             for param in detector.network.parameters():
                 param.grad = None
 
@@ -485,7 +486,7 @@ def parse_args():
     parser.add_argument("--debug", action="store_true", help="torch hps")
 
     # object detection parameters
-    parser.add_argument("--detection_per_img", type=int, default=200, help="detection hps")
+    parser.add_argument("--detection_per_img", type=int, default=300, help="detection hps")
     parser.add_argument("--nms_thresh", type=float, default=0.22, help="detection hps")
     parser.add_argument("--score_thresh_glb", type=float, default=0.1, help="detection hps")
     parser.add_argument("--detector_lr", type=float, default=1e-2, help="detection hps")
@@ -520,6 +521,7 @@ def parse_args():
     # Phase of the experiment
     parser.add_argument('--resume', type=str)
     parser.add_argument('--eval', action='store_true')
+    parser.add_argument("--save_preds", action="store_true")
     parser.add_argument("--training", action="store_true", help="Run training phase")
     parser.add_argument("--validation", action="store_true", help="Run validation phase")
     parser.add_argument("--testing", action="store_true", help="Run testing phase")
@@ -527,7 +529,6 @@ def parse_args():
     args = parser.parse_args()
     args.use_pretrained = False # args.model_weights_path != ("" or "/" or None)
     args.compute_dtype = torch.float16 if args.amp else torch.float32
-    # args.max_cardinality = 120 if args.dataset == "AIIB23" else 299 # delete
 
     return args
 

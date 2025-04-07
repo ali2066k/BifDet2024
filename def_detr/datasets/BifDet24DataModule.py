@@ -7,18 +7,17 @@ from glob import glob
 import os
 import torch
 from monai.apps.detection.transforms.dictionary import ConvertBoxToStandardModed, AffineBoxToImageCoordinated, \
-    ClipBoxToImaged, RandCropBoxByPosNegLabeld, SpatialCropBox, MaskToBoxd, BoxToMaskd
+    ClipBoxToImaged, RandCropBoxByPosNegLabeld
 from monai.data.utils import no_collation
 from monai.transforms import (
     Compose,
     LoadImaged,
     EnsureChannelFirstd,
     EnsureTyped,
-    DeleteItemsd,
     DivisiblePadd,
     CropForegroundd,
     ResizeWithPadOrCropd,
-    RandSpatialCropd, ScaleIntensityRanged,
+    ScaleIntensityRanged,
 )
 from monai.data import DataLoader, Dataset,CacheDataset, load_decathlon_datalist
 
@@ -41,7 +40,6 @@ class BifDet2024DataModule():
         self.test_set = None
         self.val_set = None
         self.params = params
-         # self.max_cardinality = 22
         self.nb_train = 33
         self.compute_dtype = compute_dtype
 
@@ -53,7 +51,7 @@ class BifDet2024DataModule():
             base_dir=self.train_data_path,
         )
         self.max_cardinality = len(self.raw_train_set)
-        print(f"Number of Patients in training set {self.max_cardinality}")
+        print(f"Number of Patients: {self.max_cardinality}")
         for i in range(self.max_cardinality):
             self.raw_train_set[i]['awlabel'] = self.raw_train_set[i]['awlabel'].replace("imagesTr", "labelsTr")
             self.raw_train_set[i]['lung'] = self.raw_train_set[i]['lung'].replace("imagesTr", "lungsTr")
@@ -109,19 +107,7 @@ class BifDet2024DataModule():
                                      b_max=self.params['PIXEL_NORM_MAX'], clip=True),
                 ConvertBoxToStandardModed(box_keys=['boxes'], mode="cccwhd"),
                 CropForegroundd(keys=['image', 'lung'], source_key='lung', allow_smaller=False),
-                # DivisiblePadd(keys=['image'], k=self.params["PATCH_SIZE"]),
                 ResizeWithPadOrCropd(keys=['image', 'lung'], spatial_size=self.params['VAL_PATCH_SIZE']),
-                # RandCropBoxByPosNegLabeld(
-                #     image_keys=['image'],
-                #     box_keys='boxes',
-                #     label_keys='label',
-                #     spatial_size=self.params["PATCH_SIZE"],
-                #     whole_box=True,
-                #     num_samples=1,
-                #     pos=1,
-                #     neg=0,
-                #     allow_smaller=False
-                # ),
                 AffineBoxToImageCoordinated(
                     box_keys=['boxes'],
                     box_ref_image_keys='image',
@@ -148,11 +134,9 @@ class BifDet2024DataModule():
         if dataset_library == 'monai':
             if self.params["CACHE_DS"]:
                 self.train_set = CacheDataset(data=np.array(self.raw_train_set)[perm][:self.nb_train], transform=self.train_transform)
-            #     # self.val_set = CacheDataset(data=self.train_set[12:], transform=self.val_transform)
             else:
                 self.train_set = Dataset(data=np.array(self.raw_train_set)[perm][:self.nb_train], transform=self.train_transform)
             self.val_set = Dataset(data=np.array(self.raw_train_set)[perm][self.nb_train:], transform=self.val_transform)
-            # self.test_set = Dataset(data=self.test_files, transform=self.val_transform)
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(dataset=self.train_set,

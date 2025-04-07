@@ -123,4 +123,3 @@ dependencies:
       - triton==2.2.0
       - urllib3==2.2.1
       - werkzeug==3.0.3
-prefix: /home/qbouniot/miniconda3/envs/bifdet

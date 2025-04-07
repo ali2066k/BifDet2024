@@ -1,40 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name=exp1%j        # name of job
-#SBATCH --output=exp_outputs/exp_retina_TravailGPU%j.out
-#SBATCH --error=exp_outputs/exp_retina_TravailGPU%j.err
-#SBATCH --time=24:00:00       # Maximum execution time (HH:MM:SS)
-#SBATCH --gpus=1              # Number of GPUs
-#SBATCH --nodes=1             # Number of nodes
-#SBATCH --ntasks-per-node 1
-#SBATCH --cpus-per-task 20     # Number of CPU cores per task
-#SBATCH --partition=A100       # GPU partition (you might need to adjust this)
-#SBATCH --mem=120GB
 
-set -x
-
-# Load the required modules (you may need to adjust this based on your environment)
-# module load cuda
-# module load cudnn
-module load python
-# Activate your Conda environment
-conda activate bifdet
-
-# Navigate to the directory containing your Python script
-cd /home/ids/akeshavarzi/projects/bifdet2024/retinanet_pipeline/
-file_paths_args = "--exp_path / \
+file_paths_args="--exp_path / \
                    --model_weights_path / \
-                   --annot_fname bboxes_16_cases.json"
+                   --annot_fname BifDet_lbl0_min_10.json"
+
 training_args="--patch_size 256\
                --val_patch_size 256\
                --patience 60 \
                --optimizer SGD \
                --training \
-               --max_epochs 500 \
+               --max_epochs 200 \
                --batch_size 1 \
                --val_interval 1 \
                --amp \
                --cache_ds \
-               --detection_per_img 200 \
+               --detection_per_img 300 \
                --nms_thresh 0.22 \
                --score_thresh_glb 0.1 \
                --detector_lr 1e-2 \
@@ -52,7 +32,7 @@ training_args="--patch_size 256\
                --momentum 0.9 \
                --weight_decay 3e-5 \
                --nesterov \
-               --a_scheduler_step_size 150 \
+               --a_scheduler_step_size 50 \
                --a_scheduler_gamma 0.1 \
                --wu_scheduler_multiplier 1 \
                --wu_scheduler_total_epoch 10"

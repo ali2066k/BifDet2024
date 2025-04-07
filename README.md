@@ -210,7 +210,8 @@ Same procedure and load the json files from "boxes" directory
    - Setup and test files can be found in `./def_detr/models/transoar/ops/setup.py` and `./def_detr/models/transoar/ops/test.py`
    - Refer to [transoar github](https://github.com/bwittmann/transoar) or [original Deformable DETR github](https://github.com/fundamentalvision/Deformable-DETR) for more informations.
 2. Update the paths in `def_detr/config.env`
-3. Run the training script `def_detr/training.py`.
+3. Run the training script `def_detr/run.sh`.
+   - Default hyperparameters used for experiments in the paper are already set as arguments in the training script.
 4. Evaluation can be done using the same script with the flags `--eval` and `--resume PATH_TO_CKPT`
 
 ## Acknowledgments

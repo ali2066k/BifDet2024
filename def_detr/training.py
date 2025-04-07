@@ -14,7 +14,6 @@ from torch.cuda.amp import GradScaler
 from torch.utils.tensorboard import SummaryWriter
 
 import util.misc as utils
-# from datasets import build_dataset, get_coco_api_from_dataset
 from datasets.BifDet24DataModule import BifDet2024DataModule
 import monai
 
@@ -147,7 +146,8 @@ def get_args_parser():
     parser.add_argument('--cls_loss_coef', default=2, type=float)
     parser.add_argument('--bbox_loss_coef', default=5, type=float)
     parser.add_argument('--giou_loss_coef', default=2, type=float)
-    parser.add_argument('--focal_alpha', default=0.25, type=float)
+    parser.add_argument('--focal_alpha', default=-1, type=float)
+    parser.add_argument("--pos_weight", default=1, type=float)
 
     # * dataset parameters
     parser.add_argument('--num_classes', default=1)
@@ -163,6 +163,7 @@ def get_args_parser():
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
+    parser.add_argument('--save_preds', action='store_true')
     parser.add_argument('--num_workers', default=int(os.getenv('NUM_WORKERS')), type=int)
     parser.add_argument("--cache_ds", action="store_true", default=False, help="Caching dataset or not")
     parser.add_argument("--amp", action="store_true", default=False, help="For improving the training")
@@ -170,7 +171,6 @@ def get_args_parser():
     return parser
 
 def main(args):
-    # utils.init_distributed_mode(args)
 
     params_dict = {
         'PATCH_SIZE': (args.patch_size,) * 3,
@@ -208,9 +208,6 @@ def main(args):
     print(f"seed fixed to {seed}")
 
     monai.config.print_config()
-    # torch.backends.cudnn.enabled = False
-    # torch.backends.cudnn.benchmark = True
-    # torch.set_num_threads(4)
 
     print(os.getenv("DATA_SRC"))
     print(args.annot_fname)
@@ -226,7 +223,6 @@ def main(args):
     data_module.prepare_data_monai()
     data_module.setup()
 
-    # model = torch.jit.script(TransoarNet(args).to(device=device))
     model = TransoarNet(args).to(device=device)
     criterion = build_criterion(args).to(device=device)
 
@@ -234,7 +230,6 @@ def main(args):
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
 
-     # lr_backbone_names = ["backbone.0", "backbone.neck", "input_proj", "transformer.encoder"]
     def match_name_keywords(n, name_keywords):
         out = False
         for b in name_keywords:
@@ -271,36 +266,25 @@ def main(args):
                                       weight_decay=args.weight_decay)
         
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.a_scheduler_step_size, gamma=args.a_scheduler_gamma)
-    # iter_epochs = len(data_loader_train)
-    # if args.lr_drop_epochs is not None and args.scheduler_lr == 'step':
-    #     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [drop_epoch*iter_epochs for drop_epoch in args.lr_drop_epochs], gamma=0.1)
-    # elif args.scheduler_lr == 'step':
-    #     lr_scheduler = LinearWarmupStepLR(optimizer, warmup_epochs=args.warmup_lr_epochs*iter_epochs, warmup_start_lr=args.warmup_lr_start, step_size=args.lr_drop*iter_epochs, gamma=0.1)
-    # elif args.scheduler_lr == 'cosine':
-    #     lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, warmup_epochs=args.warmup_lr_epochs*iter_epochs, warmup_start_lr=args.warmup_lr_start, max_epochs=args.epochs*iter_epochs)
     scaler = GradScaler(enabled=args.amp)
 
     if args.resume:
+        print("Loading the model weights...")
         checkpoint = torch.load(Path(args.resume))
         model.load_state_dict(checkpoint['model'])
+        print("Done!")
 
     if args.eval:
         test_stats = evaluate(
-            model, criterion, data_module.val_dataloader(), device, output_dir
+            model, criterion, data_module.val_dataloader(), device, output_dir, save_preds=args.save_preds
         )
         print(test_stats)
     else:
-
-        # if args.distributed:
-        #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=False)
-        #     model_without_ddp = model.module
 
         print("Start training")
         start_time = time.time()
 
         for epoch in range(args.start_epoch, args.epochs):
-            # if args.distributed:
-            #     sampler_train.set_epoch(epoch)
             train_stats = train_one_epoch(
                 model, criterion, data_module.train_dataloader(), optimizer, device, epoch, scaler, max_norm=args.clip_max_norm)
             lr_scheduler.step()
@@ -342,17 +326,6 @@ def main(args):
                         else:
                             writer.add_scalar(f"Testing/{k[5:]}", v, log_stats["epoch"])
 
-            #     # for evaluation logs
-            #     if coco_evaluator is not None:
-            #         (output_dir / 'eval').mkdir(exist_ok=True)
-            #         if "bbox" in coco_evaluator.coco_eval:
-            #             filenames = ['latest.pth']
-            #             if epoch % 50 == 0:
-            #                 filenames.append(f'{epoch:03}.pth')
-            #             for name in filenames:
-            #                 torch.save(coco_evaluator.coco_eval["bbox"].eval,
-            #                            output_dir / "eval" / name)
-
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
@@ -363,8 +336,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     for arg in vars(args):
         print(f"{arg}: {getattr(args, arg)}")
-
-    # if args.output_dir:
-    #     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     main(args)

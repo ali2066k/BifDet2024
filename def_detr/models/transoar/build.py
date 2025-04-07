@@ -17,7 +17,6 @@ def build_backbone(args):
 
 def build_backbone_monai(args):
     conv1_t_size = [max(7, 2 * s + 1) for s in [2, 2, 2]]
-    # print(conv1_t_size)
     backbone = resnet.ResNet(
         block=resnet.ResNetBottleneck,
         layers=[3, 4, 6, 3],
@@ -27,19 +26,6 @@ def build_backbone_monai(args):
         conv1_t_size=conv1_t_size,
     )
 
-    # check the model summary
-    # input_size = (1, 256, 256, 256)  # Change according to your input size
-    # Use torchsummary to print the model summary
-    # summary(model=backbone.to(device), input_size=input_size, device="cuda" if torch.cuda.is_available() else "cpu")
-    # sys.exit()
-
-    # feature_extractor = resnet_fpn_feature_extractor(
-    #     backbone=backbone,
-    #     spatial_dims=3,
-    #     pretrained_backbone=False,
-    #     trainable_backbone_layers=None,
-    #     returned_layers=[1, 2],
-    # )
     return_layers = {f"layer{k}": str(v) for v, k in enumerate([1, 2])}
     in_channels_stage2 = backbone.in_planes // 8
     in_channels_list = [in_channels_stage2 * 2 ** (i - 1) for i in [1,2]]
@@ -90,7 +76,9 @@ def build_criterion(args):
         matcher=matcher,
         seg_proxy=args.use_seg_proxy_loss,
         seg_fg_bg=args.fg_bg,
-        weight_dict=weight_dict
+        weight_dict=weight_dict,
+        pos_weight=args.pos_weight,
+        focal_alpha=args.focal_alpha
     )
 
     return criterion

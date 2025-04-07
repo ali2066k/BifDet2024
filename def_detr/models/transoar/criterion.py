@@ -12,7 +12,7 @@ class TransoarCriterion(nn.Module):
         1) we compute hungarian assignment between ground truth boxes and the outputs of the model
         2) we supervise each pair of matched ground-truth / prediction (supervise class and box)
     """
-    def __init__(self, num_classes, matcher, seg_proxy, seg_fg_bg, weight_dict):
+    def __init__(self, num_classes, matcher, seg_proxy, seg_fg_bg, weight_dict, pos_weight=1, focal_alpha=-1):
         """ Create the criterion.
         Parameters:
             num_classes: number of object categories, omitting the special no-object category
@@ -28,6 +28,7 @@ class TransoarCriterion(nn.Module):
         self._seg_fg_bg = seg_fg_bg
 
         self.weight_dict = weight_dict
+        self.focal_alpha = focal_alpha
 
         if seg_proxy:
             self._dice_loss = SoftDiceLoss(
@@ -38,6 +39,8 @@ class TransoarCriterion(nn.Module):
         # self.cls_weights = torch.tensor(
         #     [1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
         # ).type(torch.FloatTensor)
+        self.cls_weights = torch.tensor([pos_weight, 1]).type(torch.FloatTensor)
+
 
     def loss_class(self, outputs, targets, indices):
         """Classification loss (NLL)
@@ -49,13 +52,13 @@ class TransoarCriterion(nn.Module):
         idx = self._get_src_permutation_idx(indices)
 
         target_classes_o = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)])
-        target_classes = torch.full(src_logits.shape[:2], 0,
+        target_classes = torch.full(src_logits.shape[:2], 1,
                                     dtype=torch.int64, device=src_logits.device)
         target_classes[idx] = target_classes_o
 
-        # loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.cls_weights.to(device=src_logits.device))
+        loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.cls_weights.to(device=src_logits.device))
         # Do not use class weights
-        loss_ce = F.cross_entropy(src_logits.transpose(1,2), target_classes)
+        # loss_ce = F.cross_entropy(src_logits.transpose(1,2), target_classes)
 
         return loss_ce
 
