@@ -39,7 +39,7 @@ def copy_files(case_mapping, src_images_dir, src_labels_dir, dest_base_dir):
 def load_bboxes(path, lbl_air_path, case_mapping, min_dim_sizes=[1,1,1], lbl_tag=0):
     """Loads bounding boxes from JSON files and filters based on size."""
     list_of_dict = []
-    for case_path in glob.glob(os.path.join(path, "*")):
+    for case_path in glob.glob(os.path.join(path, "BifDet*")):
         gen_dict = {}
         case_name = os.path.basename(case_path)
         gen_dict["case_name"] = f"BifDet_{case_name.split('_')[-1]}"
