@@ -129,7 +129,7 @@ def main():
     src_lungs_dir = os.path.join(src_base_dir, "lungsTr")
     base_dir = args.destination_base_dir
     dest_base_dir = os.path.join(base_dir, 'BifDet_Dataset')
-    case_mapping_file = os.path.join(base_dir, 'case_mapping.json')
+    case_mapping_file = os.path.join(dest_base_dir, 'case_mapping.json')
     os.makedirs(dest_base_dir, exist_ok=True)
     
     case_mapping = load_case_mapping(case_mapping_file)
